@@ -1,0 +1,27 @@
+# IDE
+.idea
+*.iml
+.DS_Store
+
+# Gradle
+.gradle
+/build
+/*/build
+local.properties
+
+# Android
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+
+# Log Files
+*.log
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
