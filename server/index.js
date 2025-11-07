@@ -44,9 +44,16 @@ server.listen(MQTT_PORT, function () {
 
 // Start WebSocket MQTT server (for web clients)
 const wsServer = new ws.Server({ port: WS_PORT })
-wsServer.on('connection', function (stream) {
-  console.log('WebSocket client connected')
-  aedes.handle(stream)
+wsServer.on('connection', function (stream, req) {
+  console.log('WebSocket client connected from:', req.socket.remoteAddress)
+  
+  // Create a duplex stream for aedes
+  const duplexStream = ws.createWebSocketStream(stream)
+  aedes.handle(duplexStream)
+})
+
+wsServer.on('error', function (err) {
+  console.error('WebSocket server error:', err)
 })
 
 console.log(`MQTT WebSocket server started on port ${WS_PORT}`)
