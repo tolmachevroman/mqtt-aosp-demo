@@ -68,31 +68,91 @@ fun MqttDemoScreen(viewModel: MqttViewModel = koinViewModel()) {
             )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(paddingValues),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Connection Section
-            ConnectionSection(viewModel)
+            item {
+                ConnectionSection(viewModel)
+            }
 
-            HorizontalDivider()
+            item {
+                HorizontalDivider()
+            }
 
             // Subscription Section
-            SubscriptionSection(viewModel)
+            item {
+                SubscriptionSection(viewModel)
+            }
 
-            HorizontalDivider()
+            item {
+                HorizontalDivider()
+            }
 
             // Publish Section
-            PublishSection(viewModel)
+            item {
+                PublishSection(viewModel)
+            }
 
-            HorizontalDivider()
+            item {
+                HorizontalDivider()
+            }
 
-            // Messages Section
-            MessagesSection(viewModel)
+            // Messages Section Header
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Messages (${viewModel.messages.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (viewModel.messages.isNotEmpty()) {
+                        TextButton(onClick = { viewModel.clearMessages() }) {
+                            Text("Clear")
+                        }
+                    }
+                }
+            }
+
+            // Messages
+            if (viewModel.messages.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No messages yet",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(viewModel.messages) { message ->
+                    MessageItem(message)
+                }
+            }
         }
     }
 }
@@ -156,10 +216,16 @@ fun ConnectionSection(viewModel: MqttViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = if (viewModel.isConnected.value)
-                            Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        else
-                            Color(0xFFFF5722).copy(alpha = 0.1f),
+                        color = when {
+                            viewModel.isConnected.value -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                            viewModel.statusMessage.value.contains("error", ignoreCase = true) ||
+                                    viewModel.statusMessage.value.contains(
+                                        "failed",
+                                        ignoreCase = true
+                                    ) -> Color(0xFFFF5722).copy(alpha = 0.1f)
+
+                            else -> Color(0xFFFF9800).copy(alpha = 0.1f)
+                        },
                         shape = RoundedCornerShape(8.dp)
                     )
                     .padding(12.dp),
@@ -169,9 +235,19 @@ fun ConnectionSection(viewModel: MqttViewModel) {
                     modifier = Modifier
                         .size(12.dp)
                         .background(
-                            color = if (viewModel.isConnected.value) Color(0xFF4CAF50) else Color(
-                                0xFFFF5722
-                            ),
+                            color = when {
+                                viewModel.isConnected.value -> Color(0xFF4CAF50)
+                                viewModel.statusMessage.value.contains(
+                                    "error",
+                                    ignoreCase = true
+                                ) ||
+                                        viewModel.statusMessage.value.contains(
+                                            "failed",
+                                            ignoreCase = true
+                                        ) -> Color(0xFFFF5722)
+
+                                else -> Color(0xFFFF9800)
+                            },
                             shape = RoundedCornerShape(6.dp)
                         )
                 )
@@ -208,8 +284,7 @@ fun SubscriptionSection(viewModel: MqttViewModel) {
             )
 
             Button(
-                onClick = { viewModel.subscribe() },
-                enabled = viewModel.isConnected.value
+                onClick = { viewModel.subscribe() }
             ) {
                 Text("Subscribe")
             }
@@ -249,68 +324,6 @@ fun PublishSection(viewModel: MqttViewModel) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Send Message")
-        }
-    }
-}
-
-@Composable
-fun MessagesSection(viewModel: MqttViewModel) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(400.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Messages (${viewModel.messages.size})",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (viewModel.messages.isNotEmpty()) {
-                TextButton(onClick = { viewModel.clearMessages() }) {
-                    Text("Clear")
-                }
-            }
-        }
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
-        ) {
-            if (viewModel.messages.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No messages yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(viewModel.messages) { message ->
-                        MessageItem(message)
-                    }
-                }
-            }
         }
     }
 }

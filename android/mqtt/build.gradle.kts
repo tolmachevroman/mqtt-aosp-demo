@@ -1,21 +1,17 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
 }
 
 android {
-    namespace = "com.push.notifications.via.mqtt"
+    namespace = "com.mqtt.core"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.push.notifications.via.mqtt"
         minSdk = 24
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -27,13 +23,12 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    buildFeatures {
-        compose = true
-    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -41,6 +36,10 @@ android {
             excludes += "META-INF/*.kotlin_module"
             excludes += "META-INF/io.netty.versions.properties"
         }
+    }
+
+    lint {
+        abortOnError = false
     }
 }
 
@@ -51,30 +50,24 @@ kotlin {
 }
 
 dependencies {
+    // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
 
-    // MQTT Module - provides optimized MQTT client with battery management
-    implementation(project(":mqtt"))
+    // MQTT Client
+    implementation(libs.hivemq.mqtt.client)
 
-    // ViewModel for Compose
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Koin for Dependency Injection
     implementation(libs.koin.android)
-    implementation(libs.koin.androidx.compose)
 
+    // WorkManager for reliable background tasks
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

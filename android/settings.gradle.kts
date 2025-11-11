@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MQTT Android(Demo"
 include(":app")
+include(":mqtt")
