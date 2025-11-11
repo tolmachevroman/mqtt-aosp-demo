@@ -13,33 +13,58 @@ function App() {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'sending' | 'sent' | 'error'>('disconnected')
   const [receivedMessages, setReceivedMessages] = useState<Array<{topic: string, message: string, timestamp: Date}>>([])
   const clientRef = useRef<mqtt.MqttClient | null>(null)
+  const connectionAttemptRef = useRef<boolean>(false)
 
   // Connect to MQTT broker on component mount
   useEffect(() => {
+    // Prevent multiple simultaneous connection attempts
+    if (connectionAttemptRef.current) {
+      console.log('Connection attempt already in progress, skipping...')
+      return
+    }
+
     const connectToMQTT = () => {
+      connectionAttemptRef.current = true
       setStatus('connecting')
       
-      // Connect to the WebSocket MQTT server
-      const client = mqtt.connect('ws://localhost:8080')
+      // Generate a unique client ID
+      const clientId = 'mqtt-demo-web-' + Math.random().toString(16).substr(2, 8)
+      console.log('Attempting to connect with client ID:', clientId)
+      
+      // Connect to the WebSocket MQTT server with enhanced options
+      const client = mqtt.connect('ws://localhost:8080', {
+        reconnectPeriod: 3000, // Reconnect after 3 seconds (increased)
+        connectTimeout: 10 * 1000, // 10 seconds (reduced)
+        keepalive: 30, // Send ping every 30 seconds (reduced)
+        clean: true, // Clean session
+        reschedulePings: true,
+        clientId: clientId,
+      })
       clientRef.current = client
       
       client.on('connect', () => {
-        console.log('Connected to MQTT broker')
+        console.log('✅ Connected to MQTT broker with client ID:', clientId)
+        connectionAttemptRef.current = false
         setStatus('connected')
         
         // Subscribe to demo topics to show incoming messages
         client.subscribe('demo/+', (err) => {
           if (err) {
-            console.error('Failed to subscribe:', err)
+            console.error('❌ Failed to subscribe:', err)
           } else {
-            console.log('Subscribed to demo topics')
+            console.log('📧 Subscribed to demo topics')
           }
         })
       })
       
+      client.on('reconnect', () => {
+        console.log('🔄 Attempting to reconnect to MQTT broker...')
+        setStatus('connecting')
+      })
+      
       client.on('message', (topic, payload) => {
         const messageText = payload.toString()
-        console.log(`Received message on ${topic}:`, messageText)
+        console.log(`📨 Received message on ${topic}:`, messageText)
         
         setReceivedMessages(prev => [...prev, {
           topic,
@@ -49,12 +74,26 @@ function App() {
       })
       
       client.on('error', (err) => {
-        console.error('MQTT connection error:', err)
+        console.error('❌ MQTT connection error:', err)
+        connectionAttemptRef.current = false
         setStatus('error')
       })
       
       client.on('close', () => {
-        console.log('MQTT connection closed')
+        console.log('🔌 MQTT connection closed')
+        connectionAttemptRef.current = false
+        setStatus('disconnected')
+      })
+      
+      client.on('disconnect', () => {
+        console.log('🔌 MQTT client disconnected')
+        connectionAttemptRef.current = false
+        setStatus('disconnected')
+      })
+      
+      client.on('offline', () => {
+        console.log('📱 MQTT client went offline')
+        connectionAttemptRef.current = false
         setStatus('disconnected')
       })
     }
@@ -63,45 +102,57 @@ function App() {
     
     // Cleanup on component unmount
     return () => {
+      connectionAttemptRef.current = false
       if (clientRef.current) {
-        clientRef.current.end()
+        console.log('🧹 Cleaning up MQTT connection...')
+        clientRef.current.removeAllListeners() // Remove all event listeners
+        clientRef.current.end(true) // Force close
+        clientRef.current = null
       }
     }
   }, [])
 
   const sendMessage = async () => {
-    if (!message.trim() || !clientRef.current || status !== 'connected') return
+    if (!message.trim() || !clientRef.current || status !== 'connected' || connectionAttemptRef.current) {
+      console.log('❌ Cannot send message:', { 
+        hasMessage: !!message.trim(), 
+        hasClient: !!clientRef.current, 
+        status, 
+        connectionInProgress: connectionAttemptRef.current 
+      })
+      return
+    }
     
     setStatus('sending')
     try {
       // Publish message to MQTT broker
-      console.log('Sending message:', { topic, message })
+      console.log('📤 Sending message:', { topic, message })
       
       clientRef.current.publish(topic, message, { qos: 0 }, (err) => {
         if (err) {
-          console.error('Error publishing message:', err)
+          console.error('❌ Error publishing message:', err)
           setStatus('error')
           setTimeout(() => setStatus('connected'), 2000)
         } else {
-          console.log('Message published successfully')
+          console.log('✅ Message published successfully')
           setMessage('')
           setStatus('connected') // Directly back to connected without intermediate 'sent' status
         }
       })
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('❌ Error sending message:', error)
       setStatus('error')
       setTimeout(() => setStatus('connected'), 2000)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6 md:p-8 flex items-center justify-center">
+      <div className="w-full max-w-6xl space-y-6">
         {/* Header */}
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-4">
           <div className="flex items-center justify-center">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
               MQTT Demo
             </h1>
           </div>
@@ -110,38 +161,43 @@ function App() {
           </p>
         </div>
 
-        {/* Connection Status Banner */}
-        <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${
-          status === 'connected'
-            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-700'
-            : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-700'
-        }`}>
-          <div className="flex items-center justify-center">
-            <span className={`font-medium text-lg ${
-              status === 'connected' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'
-            }`}>
-              {status === 'connected' ? 'Connected to MQTT server' : 
-               status === 'connecting' ? 'Connecting to MQTT server...' :
-               status === 'error' ? 'Connection error - check server' :
-               'Disconnected from MQTT server'}
-            </span>
+        {/* Connection Status - Outside Grid */}
+        <div className="flex justify-end mb-3">
+          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
+            status === 'connected'
+              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700'
+              : status === 'connecting'
+              ? 'bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700'
+              : 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-700'
+          }`}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${
+              status === 'connected' ? 'bg-emerald-500 animate-pulse' : 
+              status === 'connecting' ? 'bg-blue-500 animate-pulse' :
+              'bg-red-500'
+            }`} />
+            {status === 'connected' ? 'Connected' : 
+             status === 'connecting' ? 'Connecting...' :
+             status === 'error' ? 'Error' :
+             'Disconnected'}
           </div>
         </div>
-        
-        {/* Send Message Card */}
-        <Card className="shadow-xl border-0 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-6">
-            <div className="flex items-center">
-              <div>
-                <CardTitle className="text-2xl">Send Message</CardTitle>
-                <CardDescription className="text-base mt-1">
-                  Publish MQTT messages to connected devices
-                </CardDescription>
+
+        {/* Main Content - Two Column Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 h-[70vh]">
+          {/* Send Message Card */}
+          <Card className="shadow-xl bg-card/50 backdrop-blur-sm flex flex-col h-full">
+            <CardHeader className="pb-6">
+              <div className="flex items-center">
+                <div>
+                  <CardTitle className="text-2xl">Send Message</CardTitle>
+                  <CardDescription className="text-base mt-1">
+                    Publish MQTT messages to connected devices
+                  </CardDescription>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
+            </CardHeader>
+            <CardContent className="space-y-6 flex-1 flex flex-col">
+            <div className="space-y-3">
               <Label htmlFor="topic" className="text-base font-semibold">
                 Topic
               </Label>
@@ -158,7 +214,7 @@ function App() {
               </p>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Label htmlFor="message" className="text-base font-semibold">
                 Message
               </Label>
@@ -183,7 +239,7 @@ function App() {
             <Button
               onClick={sendMessage}
               disabled={!message.trim() || status !== 'connected'}
-              className={`w-full h-14 font-semibold text-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
+              className={`w-full h-12 font-semibold text-base transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] bg-slate-800 hover:bg-slate-700 text-white border-slate-700 ${
                 status === 'connected' 
                   ? 'cursor-pointer hover:shadow-lg' 
                   : 'cursor-not-allowed opacity-60'
@@ -191,7 +247,7 @@ function App() {
               variant={
                 status === 'error'
                   ? 'destructive'
-                  : 'default'
+                  : 'secondary'
               }
             >
               <span>
@@ -202,84 +258,93 @@ function App() {
                 {status === 'error' && 'Connection Error'}
               </span>
             </Button>
+            
+            {/* How it works section - pushed to bottom */}
+            <div className="mt-auto pt-6 border-t border-muted">
+              <h4 className="text-lg font-semibold text-foreground mb-3">How it works</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                Messages are broadcast to all devices subscribed to the topic. 
+                Connect your Android app to <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2 py-1 rounded text-xs border mx-1">mqtt://localhost:1883</code> to receive messages in real-time.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-muted-foreground">WebSocket: </span>
+                  <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded border text-xs">ws://localhost:8080</code>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-muted-foreground">TCP: </span>
+                  <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded border text-xs">localhost:1883</code>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Received Messages */}
-        {receivedMessages.length > 0 && (
-          <Card className="shadow-xl border-0 bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl">Recent Messages</CardTitle>
-                  <CardDescription className="text-base mt-1">
-                    Live messages from connected devices
-                  </CardDescription>
-                </div>
-                <div className="bg-green-500/10 text-green-600 px-4 py-2 rounded-full text-base font-medium">
+          {/* Received Messages */}
+          <Card className="shadow-xl bg-card/50 backdrop-blur-sm flex flex-col h-full">
+          <CardHeader className="pb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">Recent Messages</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Live messages from connected devices
+                </CardDescription>
+              </div>
+              {receivedMessages.length > 0 && (
+                <div className="bg-green-500/10 text-green-600 px-4 py-2 rounded-full text-sm font-medium">
                   {receivedMessages.length} messages
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-                {receivedMessages.slice().reverse().map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className="group p-5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border transition-all duration-200 hover:shadow-md hover:scale-[1.01] cursor-default"
-                  >
-                    <div className="flex items-start justify-between space-x-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <code className="font-mono text-base font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg">
-                            {msg.topic}
-                          </code>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col">
+            {receivedMessages.length > 0 ? (
+              <>
+                <div className="space-y-4 flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                  {receivedMessages.slice().reverse().map((msg, index) => (
+                    <div 
+                      key={index} 
+                      className="group p-5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border"
+                    >
+                      <div className="flex items-start justify-between space-x-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <code className="font-mono text-base font-semibold text-primary bg-primary/10 px-3 py-2 rounded">
+                              {msg.topic}
+                            </code>
+                          </div>
+                          <p className="text-foreground font-medium break-words leading-relaxed text-base">
+                            {msg.message}
+                          </p>
                         </div>
-                        <p className="text-foreground font-medium break-words leading-relaxed text-base">
-                          {msg.message}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
-                        <div className="text-sm text-muted-foreground font-medium">
-                          {msg.timestamp.toLocaleTimeString()}
+                        <div className="flex flex-col items-end flex-shrink-0">
+                          <div className="text-base text-muted-foreground font-medium">
+                            {msg.timestamp.toLocaleTimeString()}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              {receivedMessages.length >= 10 && (
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Showing last 10 messages • Messages auto-refresh
-                  </p>
+                  ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Footer Info */}
-        <div className="text-center space-y-6">
-          <div className="p-6 bg-muted/30 rounded-xl border-dashed border-2 border-muted">
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <h3 className="text-xl font-semibold text-foreground">How it works</h3>
-            </div>
-            <p className="text-muted-foreground text-base leading-relaxed max-w-2xl mx-auto">
-              Messages are broadcast to all devices subscribed to the topic. 
-              Connect your Android app to <code className="bg-muted px-2 py-1 rounded text-sm">mqtt://localhost:1883</code> 
-              to receive messages in real-time.
-            </p>
-          </div>
-          
-          <div className="flex items-center justify-center space-x-8 text-sm text-muted-foreground">
-            <div className="flex items-center space-x-2">
-              <span>WebSocket: ws://localhost:8080</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>TCP: localhost:1883</span>
-            </div>
-          </div>
+                {receivedMessages.length >= 10 && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Showing last 10 messages • Messages auto-refresh
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 flex-1 flex items-center justify-center">
+                <p className="text-muted-foreground text-sm">
+                  No messages received yet. Send a message to see it appear here.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         </div>
       </div>
     </div>
