@@ -511,13 +511,15 @@ Keep payloads small:
 
 ### Comparison with Alternatives
 
-| Feature | HiveMQ | Eclipse Paho | Moquette |
-|---------|--------|--------------|----------|
-| Battery Impact | Excellent | Good | Good |
-| Reconnection | Automatic | Manual | Manual |
-| Backpressure | Yes | No | Limited |
-| Netty-based | Yes | No | No |
-| APK Size Impact | +2-3 MB | +500 KB | +1 MB |
+| Feature          | HiveMQ    | Mosquitto | Moquette |
+|------------------|-----------|-----------|----------|
+| Battery Impact   | Excellent | Good      | Good     |
+| Reconnection     | Automatic | Manual    | Manual   |
+| Backpressure     | Yes       | Limited   | Limited  |
+| Netty-based      | Yes       | No        | No       |
+| APK Size Impact  | +2-3 MB   | +800 KB   | +1 MB    |
+| MQTT 5.0 Support | Yes       | Yes       | Limited  |
+| Android Native   | Yes       | C/JNI     | Yes      |
 
 ## Recommendations
 

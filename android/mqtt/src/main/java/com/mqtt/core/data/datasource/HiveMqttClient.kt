@@ -1,4 +1,4 @@
-package com.mqtt.core.client
+package com.mqtt.core.data.datasource
 
 import android.util.Log
 import com.hivemq.client.mqtt.MqttClient as HiveMqClient
@@ -7,9 +7,9 @@ import com.hivemq.client.mqtt.datatypes.MqttQos
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck
-import com.mqtt.core.model.MqttConfig
-import com.mqtt.core.model.MqttConnectionState
-import com.mqtt.core.model.MqttMessage
+import com.mqtt.core.domain.model.MqttConfig
+import com.mqtt.core.domain.model.MqttConnectionState
+import com.mqtt.core.domain.model.MqttMessage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

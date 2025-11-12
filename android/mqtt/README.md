@@ -86,7 +86,7 @@ underlying MQTT implementation.
 
 **Complexity**
 
-- More complex than simpler MQTT clients (e.g., Eclipse Paho)
+- More complex than some alternative MQTT client libraries
 - Steeper learning curve for advanced features
 - May be overkill for simple use cases
 - Impact: Our module abstracts this complexity away
@@ -112,17 +112,11 @@ underlying MQTT implementation.
 
 ### Alternatives Considered
 
-**Eclipse Paho Android Service**
+**Mosquitto Client Library**
 
-- Pros: Smaller size, Android-specific, simpler API
-- Cons: Less actively maintained, older architecture, no MQTT 5.0 support
-- Why not chosen: Less modern, no reactive API, limited MQTT 5.0 support
-
-**Eclipse Paho Java Client**
-
-- Pros: Smaller size, widely used, stable
-- Cons: Callback-based API, no reactive support, Android lifecycle handling needed
-- Why not chosen: Not as modern, requires more Android-specific wrapper code
+- Pros: Lightweight, C-based with JNI wrapper
+- Cons: Requires NDK, less idiomatic for Android/Kotlin
+- Why not chosen: Harder to integrate and maintain
 
 **Moquette**
 
@@ -146,6 +140,89 @@ If you need to switch to a different MQTT client library in the future:
 4. No changes needed in the app layer
 
 This modular design ensures flexibility and prevents vendor lock-in.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│           App Layer (UI)                │
+│  Activities, ViewModels, Compose        │
+└────────────────┬────────────────────────┘
+                 │
+┌────────────────▼────────────────────────┐
+│      MqttRepository                     │
+│  Service binding & lifecycle management │
+└────────────────┬────────────────────────┘
+                 │
+┌────────────────▼────────────────────────┐
+│      MqttService (Foreground)           │
+│  • Network monitoring                   │
+│  • WakeLock management                  │
+│  • Reconnection logic                   │
+│  • Notification management              │
+└────────────────┬────────────────────────┘
+                 │
+┌────────────────▼────────────────────────┐
+│      MqttClient (Interface)             │
+│      HiveMqttClient (Implementation)    │
+│  • Connect/Disconnect                   │
+│  • Publish/Subscribe                    │
+│  • State management                     │
+└────────────────┬────────────────────────┘
+                 │
+┌────────────────▼────────────────────────┐
+│      HiveMQ MQTT Client Library         │
+└─────────────────────────────────────────┘
+```
+
+### Clean Architecture Structure
+
+This module follows **Clean Architecture** principles with clear separation of concerns:
+
+```
+com.mqtt.core/
+├── data/                           # Data Layer
+│   ├── datasource/                 # Data sources (network, local, etc.)
+│   │   ├── MqttClient.kt          # MQTT client interface
+│   │   └── HiveMqttClient.kt      # HiveMQ implementation
+│   ├── repository/                 # Repository implementations
+│   │   └── MqttRepository.kt      # MQTT repository (service binding)
+│   └── util/                       # Data layer utilities
+│       └── NetworkMonitor.kt      # Network connectivity monitoring
+│
+├── domain/                         # Domain Layer
+│   └── model/                      # Domain models/entities
+│       ├── MqttConfig.kt          # MQTT configuration model
+│       ├── MqttConnectionState.kt # Connection state sealed class
+│       └── MqttMessage.kt         # MQTT message model
+│
+└── ui/                             # UI/Presentation Layer
+    └── service/                    # Android services
+        └── MqttService.kt         # Foreground service for MQTT
+```
+
+**Layer Responsibilities:**
+
+- **Data Layer**: Handles all data operations and external communication (MQTT broker, network
+  monitoring)
+- **Domain Layer**: Pure business logic and models with no Android dependencies
+- **UI Layer**: Android-specific components (services, activities, fragments)
+
+**Dependency Flow:**
+
+```
+UI → Data → Domain
+```
+
+Dependencies point inward - the Domain layer has no dependencies on outer layers.
+
+**Benefits:**
+
+- **Separation of Concerns**: Each layer has a single, well-defined responsibility
+- **Testability**: Pure domain logic can be tested without Android dependencies
+- **Maintainability**: Changes in one layer don't cascade through the entire codebase
+- **Flexibility**: Easy to swap implementations (e.g., replace HiveMQ with another MQTT library)
+- **Scalability**: Clear structure makes it easier to add new features
 
 ## Installation
 
@@ -342,14 +419,19 @@ The service uses:
 ### Public Test Brokers
 
 ```kotlin
-// HiveMQ Public Broker
+// HiveMQ Public Broker (No authentication)
 val config = MqttConfig(
     brokerUrl = "tcp://broker.hivemq.com:1883"
 )
 
-// Eclipse IoT (with SSL)
+// Test.mosquitto.org (Another popular test broker)
 val config = MqttConfig(
-    brokerUrl = "ssl://mqtt.eclipseprojects.io:8883"
+  brokerUrl = "tcp://test.mosquitto.org:1883"
+)
+
+// With SSL/TLS
+val config = MqttConfig(
+  brokerUrl = "ssl://broker.hivemq.com:8883"
 )
 ```
 
@@ -386,7 +468,7 @@ adb shell dumpsys batterystats > battery.txt
 - Reduce keep-alive frequency
 - Use QoS 0 for non-critical messages
 - Check for message loops
-- Profile with Battery Historian
+- Use Android Studio Energy Profiler or Perfetto for detailed analysis
 
 ### Service Gets Killed
 

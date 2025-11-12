@@ -1,9 +1,8 @@
-package com.mqtt.core.service
+package com.mqtt.core.ui.service
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,11 +13,11 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.mqtt.core.client.HiveMqttClient
-import com.mqtt.core.client.MqttClient
-import com.mqtt.core.model.MqttConfig
-import com.mqtt.core.model.MqttConnectionState
+import com.mqtt.core.data.datasource.HiveMqttClient
+import com.mqtt.core.data.datasource.MqttClient
 import com.mqtt.core.util.NetworkMonitor
+import com.mqtt.core.domain.model.MqttConfig
+import com.mqtt.core.domain.model.MqttConnectionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

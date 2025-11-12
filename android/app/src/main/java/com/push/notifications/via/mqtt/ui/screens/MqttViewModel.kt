@@ -1,13 +1,13 @@
-package com.push.notifications.via.mqtt
+package com.push.notifications.via.mqtt.ui.screens
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mqtt.core.model.MqttConfig
-import com.mqtt.core.model.MqttConnectionState
-import com.mqtt.core.model.MqttMessage
-import com.mqtt.core.repository.MqttRepository
+import com.mqtt.core.domain.model.MqttConfig
+import com.mqtt.core.domain.model.MqttConnectionState
+import com.mqtt.core.domain.model.MqttMessage
+import com.mqtt.core.data.repository.MqttRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

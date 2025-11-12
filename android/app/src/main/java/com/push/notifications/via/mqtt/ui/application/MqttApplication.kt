@@ -1,7 +1,7 @@
-package com.push.notifications.via.mqtt
+package com.push.notifications.via.mqtt.ui.application
 
 import android.app.Application
-import com.push.notifications.via.mqtt.di.appModule
+import com.push.notifications.via.mqtt.util.di.appModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin

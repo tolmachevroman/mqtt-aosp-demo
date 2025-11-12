@@ -1,8 +1,8 @@
-package com.mqtt.core.client
+package com.mqtt.core.data.datasource
 
-import com.mqtt.core.model.MqttConfig
-import com.mqtt.core.model.MqttConnectionState
-import com.mqtt.core.model.MqttMessage
+import com.mqtt.core.domain.model.MqttConfig
+import com.mqtt.core.domain.model.MqttConnectionState
+import com.mqtt.core.domain.model.MqttMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 

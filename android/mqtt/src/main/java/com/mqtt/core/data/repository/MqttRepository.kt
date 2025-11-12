@@ -1,4 +1,4 @@
-package com.mqtt.core.repository
+package com.mqtt.core.data.repository
 
 import android.content.ComponentName
 import android.content.Context
@@ -6,17 +6,18 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
-import com.mqtt.core.client.MqttClient
-import com.mqtt.core.model.MqttConfig
-import com.mqtt.core.model.MqttConnectionState
-import com.mqtt.core.model.MqttMessage
-import com.mqtt.core.service.MqttService
+import com.mqtt.core.data.datasource.MqttClient
+import com.mqtt.core.domain.model.MqttConfig
+import com.mqtt.core.domain.model.MqttConnectionState
+import com.mqtt.core.domain.model.MqttMessage
+import com.mqtt.core.ui.service.MqttService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.jvm.java
 
 /**
  * Repository for MQTT operations

@@ -1,7 +1,7 @@
-package com.push.notifications.via.mqtt.di
+package com.push.notifications.via.mqtt.util.di
 
-import com.mqtt.core.repository.MqttRepository
-import com.push.notifications.via.mqtt.MqttViewModel
+import com.mqtt.core.data.repository.MqttRepository
+import com.push.notifications.via.mqtt.ui.screens.MqttViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module

@@ -1,4 +1,4 @@
-package com.mqtt.core.model
+package com.mqtt.core.domain.model
 
 /**
  * Represents an MQTT message
