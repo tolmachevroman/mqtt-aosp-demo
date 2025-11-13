@@ -8,11 +8,11 @@ clean architecture.
 This project showcases a **modular, battery-efficient MQTT client** for Android, built with modern
 best practices:
 
-- 🏗️ **Clean Architecture** - Clear separation of Data, Domain, and UI layers
-- 🔋 **Battery Optimized** - Research-backed keep-alive intervals (~0.16% drain/hour)
-- 🚀 **Production Ready** - Foreground service, automatic reconnection, network monitoring
-- 📱 **Modern Android** - Kotlin Coroutines, Flow/StateFlow, Jetpack Compose UI
-- 🧪 **Testable** - Repository pattern with dependency injection (Koin)
+- **Clean Architecture** - Clear separation of Data, Domain, and UI layers
+- **Battery Optimized** - Research-backed keep-alive intervals (~0.16% drain/hour)
+- **Production Ready** - Foreground service, automatic reconnection, network monitoring
+- **Modern Android** - Kotlin Coroutines, Flow/StateFlow, Jetpack Compose UI
+- **Testable** - Repository pattern with dependency injection (Koin)
 
 ## Project Structure
 
@@ -54,7 +54,7 @@ android/
 
 ## MQTT Module Features
 
-### 🔋 Battery Optimization
+### Battery Optimization
 
 - **Adaptive Keep-Alive**: 4-8 minute intervals (research-backed)
 - **Smart WakeLock**: Only during critical operations with 60s timeout
@@ -62,7 +62,7 @@ android/
 - **Network-Aware**: Automatic reconnection on WiFi/Mobile data switches
 - **Battery Drain**: ~0.16% per hour with default settings
 
-### 🛡️ Reliability
+### Reliability
 
 - **Foreground Service**: Survives app backgrounding and Doze mode
 - **START_STICKY**: Automatic restart if killed by system
@@ -70,7 +70,7 @@ android/
 - **QoS Support**: All MQTT QoS levels (0, 1, 2)
 - **Persistent Sessions**: Optional to avoid resubscribing after reconnection
 
-### 🏗️ Clean Architecture
+### Clean Architecture
 
 ```
 ┌─────────────────────┐
@@ -100,7 +100,7 @@ android/
 - **Domain**: Business models (MqttConfig, MqttMessage, MqttConnectionState)
 - **UI**: Android service, system integration
 
-### 🚀 Modern Android Stack
+### Modern Android Stack
 
 - **Kotlin Coroutines**: Async/await patterns
 - **Flow & StateFlow**: Reactive streams for messages and state
@@ -119,7 +119,7 @@ cd android
 # Run on device/emulator
 ./gradlew :app:installDebug
 
-# Or click Run ▶️ in Android Studio
+# Or click Run in Android Studio
 ```
 
 ### Integrating the MQTT Module
@@ -262,24 +262,24 @@ Based on research and testing:
 | Keep-Alive   | Battery Drain (3G) | Use Case                |
 |--------------|--------------------|-------------------------|
 | 60s          | ~0.8% per hour     | Real-time messaging     |
-| 240s (4 min) | **~0.16%/hour**    | **Balanced** ⭐          |
+| 240s (4 min) | **~0.16%/hour**    | **Balanced (Default)**  |
 | 480s (8 min) | ~0.08% per hour    | Maximum battery savings |
 
 ## Architecture Benefits
 
-### ✅ Clean Architecture
+### Clean Architecture
 
 - **Testability**: Domain layer has zero Android dependencies
 - **Maintainability**: Clear boundaries between layers
 - **Flexibility**: Easy to swap MQTT implementations
 
-### ✅ Repository Pattern
+### Repository Pattern
 
 - **Abstraction**: Clean API for the app layer
 - **Service Binding**: Handles Android service lifecycle
 - **Coordination**: Manages multiple data sources
 
-### ✅ Foreground Service
+### Foreground Service
 
 - **Persistence**: Connection survives app backgrounding
 - **Doze Mode**: Exempt from battery optimization restrictions
@@ -382,7 +382,7 @@ The module automatically includes these permissions:
 
 ## Documentation
 
-📖 **[mqtt/README.md](mqtt/README.md)** - Comprehensive module documentation
+**[mqtt/README.md](mqtt/README.md)** - Comprehensive module documentation
 
 Includes:
 
@@ -397,13 +397,13 @@ Includes:
 
 The included demo app showcases:
 
-- ✅ Connect/disconnect to MQTT broker
-- ✅ Subscribe to topics with wildcard support
-- ✅ Publish messages with QoS selection
-- ✅ Real-time connection state display
-- ✅ Message history with timestamps
-- ✅ Battery-optimized configuration
-- ✅ Jetpack Compose UI
+- Connect/disconnect to MQTT broker
+- Subscribe to topics with wildcard support
+- Publish messages with QoS selection
+- Real-time connection state display
+- Message history with timestamps
+- Battery-optimized configuration
+- Jetpack Compose UI
 
 ## Contributing
 
