@@ -39,6 +39,9 @@ class MqttViewModel(
     private var subscriptionJob: Job? = null
     private var currentSubscribedTopic: String? = null
 
+    // Track sent messages to identify them when they come back through subscription
+    private val sentMessages = mutableSetOf<String>()
+
     init {
         startMqttService()
         observeServiceState()
@@ -167,7 +170,15 @@ class MqttViewModel(
         // Start new subscription
         subscriptionJob = viewModelScope.launch {
             mqttRepository.subscribe(subscribedTopic.value, qos = 1)?.collect { message ->
-                addMessage(message.topic, message.payloadAsString(), isOutgoing = false)
+                val payload = message.payloadAsString()
+                val messageKey = "${message.topic}:$payload"
+
+                // Check if this is a message we sent
+                val isOutgoing = synchronized(sentMessages) {
+                    sentMessages.remove(messageKey)
+                }
+
+                addMessage(message.topic, payload, isOutgoing = isOutgoing)
             }
         }
 
@@ -177,17 +188,29 @@ class MqttViewModel(
 
     fun publishMessage() {
         if (messageToSend.value.isNotEmpty() && publishTopic.value.isNotEmpty()) {
+            val payload = messageToSend.value
+            val topic = publishTopic.value
+
+            // Mark this message as sent before publishing
+            val messageKey = "$topic:$payload"
+            synchronized(sentMessages) {
+                sentMessages.add(messageKey)
+            }
+
             viewModelScope.launch {
                 val message = MqttMessage(
-                    topic = publishTopic.value,
-                    payload = messageToSend.value,
+                    topic = topic,
+                    payload = payload,
                     qos = 1
                 )
                 mqttRepository.publish(message).onFailure { error ->
                     statusMessage.value = "Publish failed: ${error.message}"
+                    // Remove from sent messages if publish failed
+                    synchronized(sentMessages) {
+                        sentMessages.remove(messageKey)
+                    }
                 }
             }
-            addMessage(publishTopic.value, messageToSend.value, isOutgoing = true)
             messageToSend.value = ""
         }
     }
