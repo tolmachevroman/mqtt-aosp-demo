@@ -1,18 +1,40 @@
 # MQTT Android Demo
 
-A production-ready Android application demonstrating battery-optimized MQTT implementation with
-clean architecture.
+A production-ready Android application demonstrating battery-optimized MQTT implementation with clean architecture.
+
+---
 
 ## Overview
 
-This project showcases a **modular, battery-efficient MQTT client** for Android, built with modern
-best practices:
+This project showcases a **modular, battery-efficient MQTT client** for Android, built with modern best practices:
 
 - **Clean Architecture** - Clear separation of Data, Domain, and UI layers
 - **Battery Optimized** - Research-backed keep-alive intervals (~0.16% drain/hour)
 - **Production Ready** - Foreground service, automatic reconnection, network monitoring
 - **Modern Android** - Kotlin Coroutines, Flow/StateFlow, Jetpack Compose UI
 - **Testable** - Repository pattern with dependency injection (Koin)
+
+---
+
+## Documentation Index
+
+Complete documentation for the MQTT Android Demo project.
+
+### Main Guides
+
+- [MQTT Integration Guide](docs/mqtt/README.md): MQTT implementation in the Android app
+- [Koin Dependency Injection Guide](docs/koin/README.md): Koin DI implementation
+
+---
+
+## 🚀 Quick Links
+
+- [Quick Start Guide](../QUICK_START.md) - Get running in 5 minutes
+- [Main README](../README.md) - Project overview
+- [Setup Timeline](../MQTT_ANDROID_SETUP.md) - Implementation history
+- [Recent Improvements](../IMPROVEMENTS_SUMMARY.md) - Latest changes
+
+---
 
 ## Project Structure
 
@@ -52,9 +74,9 @@ android/
 └── README.md                    # This file
 ```
 
-## MQTT Module Features
+---
 
-### Battery Optimization
+## MQTT Module Features
 
 - **Adaptive Keep-Alive**: 4-8 minute intervals (research-backed)
 - **Smart WakeLock**: Only during critical operations with 60s timeout
