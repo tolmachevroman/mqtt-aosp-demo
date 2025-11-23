@@ -31,8 +31,8 @@ function App() {
       const clientId = 'mqtt-demo-web-' + Math.random().toString(16).substr(2, 8)
       console.log('Attempting to connect with client ID:', clientId)
       
-      // Connect to the WebSocket MQTT server with enhanced options
-      const client = mqtt.connect('ws://localhost:8080', {
+      // Connect to the public Mosquitto test broker (WebSocket)
+      const client = mqtt.connect('wss://test.mosquitto.org:8081', {
         reconnectPeriod: 3000, // Reconnect after 3 seconds (increased)
         connectTimeout: 10 * 1000, // 10 seconds (reduced)
         keepalive: 30, // Send ping every 30 seconds (reduced)

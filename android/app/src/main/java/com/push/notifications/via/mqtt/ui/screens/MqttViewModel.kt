@@ -27,7 +27,7 @@ class MqttViewModel(
 
     // State
     val isConnected = mutableStateOf(false)
-    val brokerUrl = mutableStateOf("tcp://10.0.2.2:1883") // Android emulator localhost
+    val brokerUrl = mutableStateOf("tcp://test.mosquitto.org:1883") // Public host
     val subscribedTopic = mutableStateOf("demo/messages")
     val publishTopic = mutableStateOf("demo/messages")
     val messageToSend = mutableStateOf("")

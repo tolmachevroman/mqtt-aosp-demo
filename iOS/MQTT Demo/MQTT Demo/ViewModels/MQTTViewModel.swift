@@ -15,7 +15,7 @@ class MQTTViewModel: ObservableObject {
     
     // MARK: - Published Properties
     
-    @Published var brokerHost: String = "localhost"
+    @Published var brokerHost: String = "test.mosquitto.org"
     @Published var brokerPort: String = "1883"
     @Published var subscribeTopic: String = "demo/messages"
     @Published var publishTopic: String = "demo/messages"
