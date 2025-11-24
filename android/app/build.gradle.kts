@@ -66,6 +66,9 @@ dependencies {
     // ViewModel for Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+    // DataStore for persistent storage
+    implementation(libs.androidx.datastore.preferences)
+
     // Koin for Dependency Injection
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

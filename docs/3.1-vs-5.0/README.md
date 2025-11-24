@@ -47,6 +47,10 @@ MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol w
 - **Maximum Packet Size**: Prevents DoS via oversized packets
 - **Server Redirection**: Can be used for load balancing and security policies
 
+#### Summary
+- **MQTT 3.1.1:** Basic security, limited authentication, no error codes or negative acknowledgements. Use TLS for encryption.
+- **MQTT 5.0:** Advanced security features, extensible authentication, reason codes, negative acknowledgements, and better error reporting. Strongly recommended for secure deployments.
+
 ---
 
 ## Missing Features in MQTT 3.1/3.1.1
@@ -62,15 +66,66 @@ MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol w
 
 ---
 
-## Summary
-- **MQTT 5.0** is strongly recommended for new projects, especially where security, scalability, and error handling are important.
-- **MQTT 3.1/3.1.1** is still widely supported, but lacks many features and security improvements found in 5.0.
-- For secure deployments, always use TLS regardless of protocol version.
+## Delivery Confirmation: MQTT 3.1.1 vs 5.0
+
+### MQTT 3.1.1
+- **QoS 0 (At most once):** No confirmation; message is sent and forgotten.
+- **QoS 1 (At least once):** Publisher receives PUBACK from broker as confirmation.
+- **QoS 2 (Exactly once):** Publisher and broker exchange PUBREC, PUBREL, PUBCOMP for guaranteed delivery.
+- **Limitations:**
+  - No standardized error codes or reasons for delivery failure.
+  - No negative acknowledgements; failures are silent or require timeouts.
+  - No way for broker to tell client why a message was not delivered.
+
+### MQTT 5.0
+- **All QoS levels:** Same basic PUBACK/PUBREC/PUBCOMP flow as 3.1.1.
+- **Enhanced with Reason Codes:** Every acknowledgement (CONNACK, PUBACK, PUBREC, SUBACK, etc.) can include a reason code.
+  - Broker can explicitly tell the client why a message was not delivered (e.g., quota exceeded, topic not allowed, etc.).
+- **Negative Acknowledgements:** Broker can send negative acknowledgements with reason codes for failed delivery.
+- **User Properties:** Can include metadata with acknowledgements for richer context.
+- **Detailed Error Reporting:** Clients can programmatically react to specific delivery issues.
+
+### Summary
+- **MQTT 3.1.1:** Delivery confirmation is binary (success/failure), with no details on failure.
+- **MQTT 5.0:** Delivery confirmation includes reason codes and error details, allowing for more robust error handling and diagnostics.
+
+MQTT 5.0 is much better for delivery confirmation transparency and troubleshooting.
 
 ---
+
+## Authentication: MQTT 3.1.1 vs 5.0
+
+### MQTT 3.1.1
+- **Username/Password:** Only supports basic username and password authentication, sent in clear unless TLS is used.
+- **No Multi-step Authentication:** No support for challenge-response or multi-step flows.
+- **No OAuth, SASL, JWT, or mTLS:** Cannot use modern authentication methods or client certificates.
+
+### MQTT 5.0
+- **AUTH Packet:** Enables multi-step and challenge-response authentication flows.
+- **SASL Support:** Allows use of SCRAM, PLAIN, EXTERNAL, and other SASL algorithms.
+- **OAuth 2.0:** Some brokers support token-based authentication via the AUTH flow.
+- **TLS Client Certificates (mTLS):** Supports mutual TLS for client authentication using X.509 certificates.
+- **Custom Authentication Plugins:** Brokers can integrate with enterprise identity providers (LDAP, SAML, etc.) using custom plugins and the AUTH packet.
+- **JWT (JSON Web Token):** Some brokers allow JWT-based authentication in CONNECT or AUTH packets.
+
+**Summary:**
+- **MQTT 3.1.1:** Basic authentication only.
+- **MQTT 5.0:** Advanced, extensible, and modern authentication options for stronger security.
+
+---
+
+## Terminology & References
+
+- **SASL (Simple Authentication and Security Layer):** [Wikipedia](https://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer) — A framework for authentication and data security in Internet protocols.
+- **SCRAM (Salted Challenge Response Authentication Mechanism):** [RFC 5802](https://tools.ietf.org/html/rfc5802) — A SASL mechanism for secure password-based authentication.
+- **OAuth 2.0:** [OAuth.net](https://oauth.net/2/) — An open standard for access delegation, commonly used for token-based authentication.
+- **JWT (JSON Web Token):** [jwt.io](https://jwt.io/introduction/) — A compact, URL-safe means of representing claims to be transferred between two parties.
+- **mTLS (Mutual TLS):** [Cloudflare mTLS Docs](https://developers.cloudflare.com/ssl/mtls/) — A method for mutual authentication using client and server certificates.
+- **LDAP (Lightweight Directory Access Protocol):** [Wikipedia](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) — A protocol for accessing and maintaining distributed directory information services.
+- **SAML (Security Assertion Markup Language):** [Wikipedia](https://en.wikipedia.org/wiki/Security_Assertion_Markup_Language) — An XML-based standard for exchanging authentication and authorization data.
+- **X.509 Certificate:** [Wikipedia](https://en.wikipedia.org/wiki/X.509) — A standard defining the format of public key certificates.
 
 ## References
 - [MQTT 5.0 Specification](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html)
 - [MQTT 3.1.1 Specification](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html)
 - [HiveMQ MQTT 5 Essentials](https://www.hivemq.com/mqtt-5/)
-- [EMQX MQTT 5.0 Features](https://www.emqx.com/en/blog/mqtt5-new-features)

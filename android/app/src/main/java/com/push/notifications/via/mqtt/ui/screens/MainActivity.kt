@@ -189,6 +189,29 @@ fun ConnectionSection(viewModel: MqttViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                OutlinedTextField(
+                    value = viewModel.username.value,
+                    onValueChange = { viewModel.username.value = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !viewModel.isConnected.value,
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = viewModel.password.value,
+                    onValueChange = { viewModel.password.value = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !viewModel.isConnected.value,
+                    singleLine = true
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(
                     onClick = { viewModel.connect() },
                     enabled = !viewModel.isConnected.value,

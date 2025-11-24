@@ -31,8 +31,8 @@ function App() {
       const clientId = 'mqtt-demo-web-' + Math.random().toString(16).substr(2, 8)
       console.log('Attempting to connect with client ID:', clientId)
       
-      // Connect to the public Mosquitto test broker (WebSocket)
-      const client = mqtt.connect('wss://test.mosquitto.org:8081', {
+      // Connect to HiveMQ public broker (WebSockets, TLS, no authentication)
+      const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
         reconnectPeriod: 3000, // Reconnect after 3 seconds (increased)
         connectTimeout: 10 * 1000, // 10 seconds (reduced)
         keepalive: 30, // Send ping every 30 seconds (reduced)
@@ -40,19 +40,18 @@ function App() {
         reschedulePings: true,
         clientId: clientId,
       })
-      clientRef.current = client
-      
       client.on('connect', () => {
         console.log('✅ Connected to MQTT broker with client ID:', clientId)
+        clientRef.current = client; // Ensure clientRef is set
         connectionAttemptRef.current = false
         setStatus('connected')
-        
-        // Subscribe to demo topics to show incoming messages
-        client.subscribe('demo/+', (err) => {
+
+        // Subscribe only to demo/messages
+        client.subscribe('demo/messages', (err) => {
           if (err) {
             console.error('❌ Failed to subscribe:', err)
           } else {
-            console.log('📧 Subscribed to demo topics')
+            console.log('📧 Subscribed to demo/messages')
           }
         })
       })
@@ -65,12 +64,19 @@ function App() {
       client.on('message', (topic, payload) => {
         const messageText = payload.toString()
         console.log(`📨 Received message on ${topic}:`, messageText)
-        
-        setReceivedMessages(prev => [...prev, {
-          topic,
-          message: messageText,
-          timestamp: new Date()
-        }].slice(-10)) // Keep only last 10 messages
+
+        setReceivedMessages(prev => {
+          // Check for duplicate (same topic and message)
+          const isDuplicate = prev.some(
+            m => m.topic === topic && m.message === messageText
+          )
+          if (isDuplicate) return prev
+          return [...prev, {
+            topic,
+            message: messageText,
+            timestamp: new Date()
+          }].slice(-10)
+        }) // Keep only last 10 messages
       })
       
       client.on('error', (err) => {
@@ -159,6 +165,13 @@ function App() {
           <p className="text-muted-foreground text-xl max-w-2xl mx-auto leading-relaxed">
             Send real-time messages to connected Android devices and other MQTT clients
           </p>
+        </div>
+
+        {/* Broker URL Display */}
+        <div className="flex justify-center mb-2">
+          <span className="inline-flex items-center bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 rounded text-xs font-mono border">
+            Broker: wss://broker.hivemq.com:8884/mqtt
+          </span>
         </div>
 
         {/* Connection Status - Outside Grid */}
@@ -258,93 +271,72 @@ function App() {
                 {status === 'error' && 'Connection Error'}
               </span>
             </Button>
-            
-            {/* How it works section - pushed to bottom */}
-            <div className="mt-auto pt-6 border-t border-muted">
-              <h4 className="text-lg font-semibold text-foreground mb-3">How it works</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Messages are broadcast to all devices subscribed to the topic. 
-                Connect your Android app to <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2 py-1 rounded text-xs border mx-1">mqtt://localhost:1883</code> to receive messages in real-time.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-muted-foreground">WebSocket: </span>
-                  <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded border text-xs">ws://localhost:8080</code>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-muted-foreground">TCP: </span>
-                  <code className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded border text-xs">localhost:1883</code>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
           {/* Received Messages */}
           <Card className="shadow-xl bg-card/50 backdrop-blur-sm flex flex-col h-full">
-          <CardHeader className="pb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">Recent Messages</CardTitle>
-                <CardDescription className="text-base mt-1">
-                  Live messages from connected devices
-                </CardDescription>
-              </div>
-              {receivedMessages.length > 0 && (
-                <div className="bg-green-500/10 text-green-600 px-4 py-2 rounded-full text-sm font-medium">
-                  {receivedMessages.length} messages
+            <CardHeader className="pb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl">Recent Messages</CardTitle>
+                  <CardDescription className="text-base mt-1">
+                    Live messages from connected devices
+                  </CardDescription>
                 </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            {receivedMessages.length > 0 ? (
-              <>
-                <div className="space-y-4 flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-                  {receivedMessages.slice().reverse().map((msg, index) => (
-                    <div 
-                      key={index} 
-                      className="group p-5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border"
-                    >
-                      <div className="flex items-start justify-between space-x-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <code className="font-mono text-base font-semibold text-primary bg-primary/10 px-3 py-2 rounded">
-                              {msg.topic}
-                            </code>
+                {receivedMessages.length > 0 && (
+                  <div className="bg-green-500/10 text-green-600 px-4 py-2 rounded-full text-sm font-medium">
+                    {receivedMessages.length} messages
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col">
+              {receivedMessages.length > 0 ? (
+                <>
+                  <div className="space-y-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent" style={{ maxHeight: 'calc(100vh * 0.55)' }}>
+                    {receivedMessages.slice().reverse().map((msg, index) => (
+                      <div 
+                        key={index} 
+                        className="group p-5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border"
+                      >
+                        <div className="flex items-start justify-between space-x-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <code className="font-mono text-base font-semibold text-primary bg-primary/10 px-3 py-2 rounded">
+                                {msg.topic}
+                              </code>
+                            </div>
+                            <p className="text-foreground font-medium break-words leading-relaxed text-base">
+                              {msg.message}
+                            </p>
                           </div>
-                          <p className="text-foreground font-medium break-words leading-relaxed text-base">
-                            {msg.message}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end flex-shrink-0">
-                          <div className="text-base text-muted-foreground font-medium">
-                            {msg.timestamp.toLocaleTimeString()}
+                          <div className="flex flex-col items-end flex-shrink-0">
+                            <div className="text-base text-muted-foreground font-medium">
+                              {msg.timestamp.toLocaleTimeString()}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {receivedMessages.length >= 10 && (
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Showing last 10 messages • Messages auto-refresh
-                    </p>
+                    ))}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-8 flex-1 flex items-center justify-center">
-                <p className="text-muted-foreground text-sm">
-                  No messages received yet. Send a message to see it appear here.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  {receivedMessages.length >= 10 && (
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Showing last 10 messages • Messages auto-refresh
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 flex-1 flex items-center justify-center">
+                  <p className="text-muted-foreground text-sm">
+                    No messages received yet. Send a message to see it appear here.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

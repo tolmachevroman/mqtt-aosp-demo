@@ -1,5 +1,6 @@
 package com.push.notifications.via.mqtt.ui.screens
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -8,8 +9,11 @@ import com.mqtt.core.domain.model.MqttConfig
 import com.mqtt.core.domain.model.MqttConnectionState
 import com.mqtt.core.domain.model.MqttMessage
 import com.mqtt.core.data.repository.MqttRepository
+import com.push.notifications.via.mqtt.utils.ClientIdHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -23,11 +27,16 @@ data class MqttMessageItem(
 
 class MqttViewModel(
     private val mqttRepository: MqttRepository
-) : ViewModel() {
+) : ViewModel(), KoinComponent {
+
+    private val context: Context by inject()
 
     // State
     val isConnected = mutableStateOf(false)
-    val brokerUrl = mutableStateOf("tcp://test.mosquitto.org:1883") // Public host
+    val brokerUrl =
+        mutableStateOf("ssl://broker.hivemq.com:8883") // HiveMQ Public Broker with SSL/TLS
+    val username = mutableStateOf("")
+    val password = mutableStateOf("")
     val subscribedTopic = mutableStateOf("demo/messages")
     val publishTopic = mutableStateOf("demo/messages")
     val messageToSend = mutableStateOf("")
@@ -131,12 +140,19 @@ class MqttViewModel(
             return
         }
 
-        val config = MqttConfig(
-            brokerUrl = brokerUrl.value,
-            keepAliveInterval = 240, // 4 minutes - balanced
-            qos = 1
-        )
-        mqttRepository.connect(config)
+        viewModelScope.launch {
+            val clientId = ClientIdHelper.getClientId(context)
+
+            val config = MqttConfig(
+                brokerUrl = brokerUrl.value,
+                clientId = clientId,
+                username = username.value.takeIf { it.isNotEmpty() },
+                password = password.value.takeIf { it.isNotEmpty() },
+                keepAliveInterval = 240, // 4 minutes - balanced
+                qos = 1
+            )
+            mqttRepository.connect(config)
+        }
     }
 
     fun disconnect() {

@@ -22,12 +22,14 @@ Complete documentation for the MQTT Android Demo project.
 
 ### Main Guides
 
-- [MQTT Integration Guide](docs/mqtt/README.md): MQTT implementation in the Android app
-- [Koin Dependency Injection Guide](docs/koin/README.md): Koin DI implementation
+- **[MQTT Integration Guide](docs/mqtt/README.md)** - Complete MQTT setup, SSL/TLS configuration,
+  troubleshooting, and production deployment
+- [Authentication Setup](docs/authentication/README.md) - Broker authentication and test credentials
+- [Koin Dependency Injection Guide](docs/koin/README.md) - Koin DI implementation
 
 ---
 
-## 🚀 Quick Links
+## Quick Links
 
 - [Quick Start Guide](../QUICK_START.md) - Get running in 5 minutes
 - [Main README](../README.md) - Project overview
@@ -130,9 +132,35 @@ android/
 - **Koin**: Dependency injection
 - **HiveMQ Client**: Modern MQTT 3.1.1 and 5.0 support
 
-## Quick Start
+## Features
 
-### Running the Demo App
+- **SSL/TLS Encrypted Connections** - Secure MQTT over TLS using trusted CA certificates
+- **Foreground Service** - Maintains persistent MQTT connection in background
+- **Battery Optimized** - Smart wake lock management and adaptive keep-alive intervals
+- **Network Resilience** - Automatic reconnection with exponential backoff
+- **Clean Architecture** - Repository pattern with dependency injection (Koin)
+- **Jetpack Compose UI** - Modern declarative UI with Material 3
+- **Persistent Client ID** - UUID-based client identification using DataStore
+
+## SSL/TLS Configuration
+
+The app successfully connects to `broker.hivemq.com:8883` using SSL/TLS encryption with a **trusted
+CA-signed certificate**.
+
+**Key features:**
+- Uses Android's system trust store for certificate validation
+- Works with trusted certificates signed by well-known CAs
+- Proper SSL handshake timeout (30 seconds)
+- Detailed error logging for troubleshooting
+
+## Documentation
+
+- **[MQTT Integration Guide](docs/mqtt/README.md)** - Complete MQTT setup, SSL/TLS configuration,
+  troubleshooting, and production deployment
+- [Authentication Setup](docs/authentication/README.md) - Broker authentication and test credentials
+- [Koin Dependency Injection Guide](docs/koin/README.md) - Koin DI implementation
+
+## Quick Start
 
 ```bash
 # Clone and open in Android Studio
@@ -144,7 +172,40 @@ cd android
 # Or click Run in Android Studio
 ```
 
-### Integrating the MQTT Module
+### Test Connection
+
+1. Launch the app
+2. Click "Connect" (default broker: `ssl://broker.hivemq.com:8883`)
+3. Once connected, subscribe to topic: `demo/messages`
+4. Publish a message to see it appear in the message list
+
+### Broker Settings
+
+Edit in `MqttViewModel.kt`:
+
+```kotlin
+val brokerUrl = mutableStateOf("ssl://broker.hivemq.com:8883")
+val username = mutableStateOf("") // Optional
+val password = mutableStateOf("") // Optional
+```
+
+### Connection Parameters
+
+Edit in `MqttConfig`:
+
+```kotlin
+val config = MqttConfig(
+    brokerUrl = "ssl://broker.hivemq.com:8883",
+    clientId = "android_client_123",
+    username = "your_username",
+    password = "your_password",
+    keepAliveInterval = 240, // seconds
+    connectionTimeout = 30,  // seconds
+    qos = 1
+)
+```
+
+## Integrating the MQTT Module
 
 The MQTT module is designed to be reusable in any Android project:
 
@@ -250,7 +311,7 @@ class MqttViewModel(private val mqttRepository: MqttRepository) : ViewModel() {
 
 ```kotlin
 val config = MqttConfig.batteryOptimized(
-    brokerUrl = "tcp://broker.hivemq.com:1883"
+    brokerUrl = "ssl://broker.hivemq.com:8883"
 )
 // Uses: 8-minute keep-alive, persistent sessions, QoS 1
 ```
@@ -259,7 +320,7 @@ val config = MqttConfig.batteryOptimized(
 
 ```kotlin
 val config = MqttConfig.lowLatency(
-    brokerUrl = "tcp://broker.hivemq.com:1883"
+    brokerUrl = "ssl://broker.hivemq.com:8883"
 )
 // Uses: 1-minute keep-alive, clean sessions, QoS 1
 ```
@@ -268,10 +329,11 @@ val config = MqttConfig.lowLatency(
 
 ```kotlin
 val config = MqttConfig(
-    brokerUrl = "ssl://broker.example.com:8883",
-    username = "user",
-    password = "pass",
-    keepAliveInterval = 240, // 4 minutes
+    brokerUrl = "ssl://broker.hivemq.com:8883",
+    clientId = "android_client_123",
+    username = "your_username",
+    password = "your_password",
+    keepAliveInterval = 240, // seconds
     cleanSession = false,
     qos = 1
 )
@@ -314,12 +376,12 @@ Based on research and testing:
 ```kotlin
 // HiveMQ Public Broker
 val config = MqttConfig(
-    brokerUrl = "tcp://broker.hivemq.com:1883"
+    brokerUrl = "ssl://broker.hivemq.com:8883"
 )
 
 // Test.mosquitto.org (Another popular test broker)
 val config = MqttConfig(
-    brokerUrl = "tcp://test.mosquitto.org:1883"
+    brokerUrl = "ssl://test.mosquitto.org:8886"
 )
 
 // With SSL/TLS
@@ -453,5 +515,5 @@ This is a demo/reference project. Feel free to:
 
 ## Credits
 
-Built with ❤️ for the Android community, demonstrating production-ready MQTT implementation with
+Built with care for the Android community, demonstrating production-ready MQTT implementation with
 modern Android architecture.

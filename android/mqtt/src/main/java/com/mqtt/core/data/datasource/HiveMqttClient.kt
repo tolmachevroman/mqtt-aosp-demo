@@ -16,8 +16,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
+import java.security.KeyStore
+import java.security.cert.X509Certificate
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -50,19 +58,54 @@ class HiveMqttClient : MqttClient {
             val clientId = config.clientId ?: generateClientId()
             val brokerUri = parseBrokerUrl(config.brokerUrl)
 
+            Log.d(TAG, "Connecting with config:")
+            Log.d(TAG, "  Client ID: $clientId")
+            Log.d(TAG, "  Broker: ${brokerUri.host}:${brokerUri.port}")
+            Log.d(TAG, "  SSL: ${brokerUri.ssl}")
+            Log.d(TAG, "  Username: ${config.username}")
+            Log.d(TAG, "  Has Password: ${config.password != null}")
+
             // Build the MQTT client
             val clientBuilder = Mqtt3Client.builder()
                 .identifier(clientId)
                 .serverHost(brokerUri.host)
                 .serverPort(brokerUri.port)
-                .automaticReconnectWithDefaultConfig() // Uses exponential backoff
 
             // Add SSL/TLS if needed
             if (brokerUri.ssl) {
-                clientBuilder.sslWithDefaultConfig()
+                Log.d(TAG, "Configuring SSL for ${brokerUri.host}")
+
+                try {
+                    // Create TrustManagerFactory using Android's system trust store
+                    val trustManagerFactory = TrustManagerFactory.getInstance(
+                        TrustManagerFactory.getDefaultAlgorithm()
+                    )
+                    // Initialize with null to use the system's default trust store
+                    // This will trust all certificates signed by well-known CAs including Let's Encrypt
+                    trustManagerFactory.init(null as KeyStore?)
+
+                    clientBuilder.sslConfig()
+                        .trustManagerFactory(trustManagerFactory)
+                        .handshakeTimeout(30, TimeUnit.SECONDS)
+                        .applySslConfig()
+
+                    Log.d(TAG, "SSL configured with Android system trust store")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to configure SSL", e)
+                    // Fall back to default SSL config
+                    clientBuilder.sslWithDefaultConfig()
+                    Log.d(TAG, "SSL configured with default config (fallback)")
+                }
             }
 
+            // Configure automatic reconnection with exponential backoff
+            clientBuilder.automaticReconnect()
+                .initialDelay(1, TimeUnit.SECONDS)
+                .maxDelay(120, TimeUnit.SECONDS)
+                .applyAutomaticReconnect()
+
             client = clientBuilder.buildAsync()
+            Log.d(TAG, "MQTT client built successfully")
 
             // Build connect options
             val connectBuilder = com.hivemq.client.mqtt.mqtt3.message.connect.Mqtt3Connect.builder()
@@ -71,22 +114,45 @@ class HiveMqttClient : MqttClient {
 
             // Add authentication if provided
             if (config.username != null && config.password != null) {
+                Log.d(TAG, "Adding authentication credentials")
                 connectBuilder.simpleAuth()
                     .username(config.username)
                     .password(config.password.toByteArray(Charsets.UTF_8))
                     .applySimpleAuth()
             }
 
-            // Connect
-            val result = suspendCoroutine<Result<Mqtt3ConnAck>> { continuation ->
-                client?.connect(connectBuilder.build())
-                    ?.whenComplete { ack, throwable ->
-                        if (throwable != null) {
-                            continuation.resume(Result.failure(throwable))
-                        } else {
-                            continuation.resume(Result.success(ack))
-                        }
+            Log.d(TAG, "Initiating connection...")
+            // Connect with timeout (use config timeout value)
+            val timeoutMillis = config.connectionTimeout * 1000
+            val result = try {
+                withTimeout(timeoutMillis) {
+                    suspendCoroutine<Result<Mqtt3ConnAck>> { continuation ->
+                        client?.connect(connectBuilder.build())
+                            ?.whenComplete { ack, throwable ->
+                                if (throwable != null) {
+                                    Log.e(TAG, "Connection failed in whenComplete", throwable)
+                                    // Log the full exception chain for debugging
+                                    var cause: Throwable? = throwable
+                                    var depth = 0
+                                    while (cause != null && depth < 5) {
+                                        Log.e(
+                                            TAG,
+                                            "  Cause [$depth]: ${cause::class.java.simpleName}: ${cause.message}"
+                                        )
+                                        cause = cause.cause
+                                        depth++
+                                    }
+                                    continuation.resume(Result.failure(throwable))
+                                } else {
+                                    Log.d(TAG, "Connection successful in whenComplete")
+                                    continuation.resume(Result.success(ack))
+                                }
+                            }
                     }
+                }
+            } catch (e: TimeoutCancellationException) {
+                Log.e(TAG, "Connection timed out after $timeoutMillis ms", e)
+                Result.failure(Exception("Connection timed out after $timeoutMillis ms", e))
             }
 
             result.onSuccess {
